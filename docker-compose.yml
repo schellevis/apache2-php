@@ -1,0 +1,30 @@
+# docker-compose.yml – local development helper
+#
+# Usage:
+#   docker compose up --build            # HTTP-only, self-signed TLS
+#   DOMAIN=example.com EMAIL=you@example.com USE_LETSENCRYPT=true docker compose up --build
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.3}
+    image: apache2-php:local
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN:           ${DOMAIN:-localhost}
+      EMAIL:            ${EMAIL:-}
+      USE_LETSENCRYPT:  ${USE_LETSENCRYPT:-false}
+      FORCE_HTTPS:      ${FORCE_HTTPS:-false}
+    volumes:
+      # Application source code
+      - ./www:/var/www/html
+      # Persist Let's Encrypt certificates across container restarts
+      - letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+
+volumes:
+  letsencrypt:
