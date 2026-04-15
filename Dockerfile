@@ -1,8 +1,15 @@
 # PHP version can be overridden at build time:
 #   docker build --build-arg PHP_VERSION=8.4 -t apache2-php .
 ARG PHP_VERSION=8.4
+ARG PHP_EXTENSIONS="bcmath curl dom exif gd gettext gmp intl mbstring mysqli opcache pcntl pdo pdo_mysql pdo_pgsql pdo_sqlite pgsql posix simplexml soap sockets xsl zip"
+ARG PECL_EXTENSIONS="apcu redis memcached mongodb imagick swoole"
+ARG DEV_PECL_EXTENSIONS="xdebug pcov"
 
 FROM php:${PHP_VERSION}-apache
+
+ARG PHP_EXTENSIONS
+ARG PECL_EXTENSIONS
+ARG DEV_PECL_EXTENSIONS
 
 LABEL org.opencontainers.image.title="apache2-php" \
       org.opencontainers.image.description="Apache2 + PHP with common extensions and Let's Encrypt support" \
@@ -12,6 +19,7 @@ LABEL org.opencontainers.image.title="apache2-php" \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         certbot \
         cron \
+        libcap2-bin \
         libcurl4-openssl-dev \
         libfreetype6-dev \
         libgmp-dev \
@@ -22,6 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libonig-dev \
         libpng-dev \
         libpq-dev \
+        libsqlite3-dev \
         libssl-dev \
         libwebp-dev \
         libxml2-dev \
@@ -35,56 +44,48 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure GD with JPEG, WebP and FreeType support
-RUN docker-php-ext-configure gd \
-        --with-freetype \
-        --with-jpeg \
-        --with-webp
+RUN set -eux; \
+    if printf '%s\n' " ${PHP_EXTENSIONS} " | grep -q ' gd '; then \
+        docker-php-ext-configure gd \
+            --with-freetype \
+            --with-jpeg \
+            --with-webp; \
+    fi; \
+    if [ -n "${PHP_EXTENSIONS}" ]; then \
+        docker-php-ext-install -j"$(nproc)" ${PHP_EXTENSIONS}; \
+    fi; \
+    pecl_enable_extensions=""; \
+    install_igbinary=false; \
+    case " ${PECL_EXTENSIONS} " in \
+        *" igbinary "*|*" redis "*|*" memcached "*) install_igbinary=true ;; \
+    esac; \
+    if [ "${install_igbinary}" = "true" ]; then \
+        pecl install igbinary; \
+        pecl_enable_extensions="${pecl_enable_extensions} igbinary"; \
+    fi; \
+    for ext in ${PECL_EXTENSIONS}; do \
+        case "${ext}" in \
+            apcu|imagick|mongodb) pecl install "${ext}" ;; \
+            igbinary) continue ;; \
+            redis) pecl install -D 'enable-redis-igbinary="yes"' redis ;; \
+            memcached) pecl install -D 'enable-memcached-igbinary="yes"' memcached ;; \
+            swoole) pecl install -D 'enable-swoole-openssl="yes"' swoole ;; \
+            "") continue ;; \
+            *) echo "Unsupported PECL extension: ${ext}" >&2; exit 1 ;; \
+        esac; \
+        pecl_enable_extensions="${pecl_enable_extensions} ${ext}"; \
+    done; \
+    if [ -n "${pecl_enable_extensions}" ]; then \
+        docker-php-ext-enable ${pecl_enable_extensions}; \
+    fi; \
+    if [ -n "${DEV_PECL_EXTENSIONS}" ]; then \
+        pecl install ${DEV_PECL_EXTENSIONS}; \
+    fi
 
-# Install PHP extensions
-RUN docker-php-ext-install -j"$(nproc)" \
-        bcmath \
-        curl \
-        dom \
-        exif \
-        gd \
-        gettext \
-        gmp \
-        intl \
-        mbstring \
-        mysqli \
-        opcache \
-        pcntl \
-        pdo \
-        pdo_mysql \
-        pdo_pgsql \
-        pdo_sqlite \
-        pgsql \
-        posix \
-        simplexml \
-        soap \
-        sockets \
-        xsl \
-        zip
-
-# Install igbinary first – used as a faster serializer by redis and memcached
-RUN pecl install igbinary \
-    && docker-php-ext-enable igbinary
-
-# Install remaining PECL extensions
-# redis and memcached are built with igbinary support (igbinary must be installed first)
-RUN pecl install apcu \
-    && pecl install -D 'enable-redis-igbinary="yes"' redis \
-    && pecl install -D 'enable-memcached-igbinary="yes"' memcached \
-    && pecl install mongodb \
-    && pecl install imagick \
-    && pecl install -D 'enable-swoole-openssl="yes"' swoole \
-    && docker-php-ext-enable apcu redis memcached mongodb imagick swoole opcache
-
-# Install development-only PECL extensions – NOT enabled by default.
+# Install development-only PECL extensions via DEV_PECL_EXTENSIONS – NOT enabled by default.
 # Enable in development by adding a volume-mounted ini file, e.g.:
 #   echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini
 #   echo "extension=pcov"        > /usr/local/etc/php/conf.d/pcov.ini
-RUN pecl install xdebug pcov
 
 # Enable Apache modules
 RUN a2enmod rewrite ssl headers expires deflate http2
@@ -93,6 +94,10 @@ RUN a2enmod rewrite ssl headers expires deflate http2
 RUN { echo 'ServerTokens Prod'; echo 'ServerSignature Off'; } \
     > /etc/apache2/conf-available/security-hardening.conf \
     && a2enconf security-hardening
+
+RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/apache2 \
+    && mkdir -p /var/run/apache2 /var/lock/apache2 /var/log/apache2 /var/www/letsencrypt \
+    && chown -R www-data:www-data /var/run/apache2 /var/lock/apache2 /var/log/apache2 /var/www/letsencrypt
 
 # Copy custom configuration files
 COPY config/apache2/000-default.conf /etc/apache2/sites-available/000-default.conf
