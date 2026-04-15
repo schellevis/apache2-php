@@ -14,8 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         cron \
         libcurl4-openssl-dev \
         libfreetype6-dev \
+        libgmp-dev \
         libicu-dev \
         libjpeg62-turbo-dev \
+        libmagickwand-dev \
+        libmemcached-dev \
         libonig-dev \
         libpng-dev \
         libpq-dev \
@@ -24,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxml2-dev \
         libxslt1-dev \
         libzip-dev \
+        libzstd-dev \
         openssl \
         python3-certbot-apache \
         unzip \
@@ -44,23 +48,43 @@ RUN docker-php-ext-install -j"$(nproc)" \
         exif \
         gd \
         gettext \
+        gmp \
         intl \
         mbstring \
         mysqli \
         opcache \
+        pcntl \
         pdo \
         pdo_mysql \
         pdo_pgsql \
+        pdo_sqlite \
         pgsql \
+        posix \
         simplexml \
         soap \
         sockets \
         xsl \
         zip
 
-# Install PECL extensions
-RUN pecl install apcu redis \
-    && docker-php-ext-enable apcu redis opcache
+# Install igbinary first – used as a faster serializer by redis and memcached
+RUN pecl install igbinary \
+    && docker-php-ext-enable igbinary
+
+# Install remaining PECL extensions
+# redis and memcached are built with igbinary support (igbinary must be installed first)
+RUN pecl install apcu \
+    && pecl install -D 'enable-redis-igbinary="yes"' redis \
+    && pecl install -D 'enable-memcached-igbinary="yes"' memcached \
+    && pecl install mongodb \
+    && pecl install imagick \
+    && pecl install -D 'enable-swoole-openssl="yes"' swoole \
+    && docker-php-ext-enable apcu redis memcached mongodb imagick swoole opcache
+
+# Install development-only PECL extensions – NOT enabled by default.
+# Enable in development by adding a volume-mounted ini file, e.g.:
+#   echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini
+#   echo "extension=pcov"        > /usr/local/etc/php/conf.d/pcov.ini
+RUN pecl install xdebug pcov
 
 # Enable Apache modules
 RUN a2enmod rewrite ssl headers expires deflate http2
