@@ -1,6 +1,6 @@
 # PHP version can be overridden at build time:
 #   docker build --build-arg PHP_VERSION=8.4 -t apache2-php .
-ARG PHP_VERSION=8.3
+ARG PHP_VERSION=8.4
 
 FROM php:${PHP_VERSION}-apache
 
@@ -64,6 +64,11 @@ RUN pecl install apcu redis \
 
 # Enable Apache modules
 RUN a2enmod rewrite ssl headers expires deflate http2
+
+# Harden Apache – suppress version info in HTTP headers and error pages
+RUN { echo 'ServerTokens Prod'; echo 'ServerSignature Off'; } \
+    > /etc/apache2/conf-available/security-hardening.conf \
+    && a2enconf security-hardening
 
 # Copy custom configuration files
 COPY config/apache2/000-default.conf /etc/apache2/sites-available/000-default.conf
