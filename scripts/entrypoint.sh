@@ -14,6 +14,7 @@ DOMAIN="${DOMAIN:-localhost}"
 EMAIL="${EMAIL:-}"
 USE_LETSENCRYPT="${USE_LETSENCRYPT:-false}"
 FORCE_HTTPS="${FORCE_HTTPS:-false}"
+# Export so Apache can resolve ${DOMAIN} in vhost config when started from this entrypoint.
 export DOMAIN
 
 SSL_CERT="/etc/ssl/certs/apache-ssl.crt"
@@ -24,6 +25,15 @@ WWW_GID="$(id -g www-data)"
 # ---- helpers ----------------------------------------------------------------
 
 log() { echo "[entrypoint] $*"; }
+
+validate_domain() {
+    case "${DOMAIN}" in
+        *[!A-Za-z0-9.-]* | "" | .* | *..* | *- | -*)
+            log "ERROR: DOMAIN contains unsupported characters"
+            exit 1
+            ;;
+    esac
+}
 
 prepare_runtime_dirs() {
     mkdir -p \
@@ -78,6 +88,8 @@ enable_ssl_vhost() {
 
 prepare_runtime_dirs
 
+validate_domain
+
 if [ "${USE_LETSENCRYPT}" = "true" ]; then
     if [ -z "${EMAIL}" ]; then
         log "ERROR: EMAIL must be set when USE_LETSENCRYPT=true"
@@ -110,7 +122,7 @@ if [ "${USE_LETSENCRYPT}" = "true" ]; then
     cat > /etc/cron.d/certbot-renew <<EOF
 0 0,12 * * * root certbot renew --quiet \
     --webroot -w /var/www/letsencrypt \
-    --deploy-hook "install -m 0644 ${CERT_PATH} ${SSL_CERT} && install -m 0640 -o root -g www-data ${KEY_PATH} ${SSL_KEY} && apachectl -k graceful"
+    --deploy-hook "install -m 0644 '${CERT_PATH}' '${SSL_CERT}' && install -m 0640 -o root -g www-data '${KEY_PATH}' '${SSL_KEY}' && apachectl -k graceful"
 EOF
     chmod 0644 /etc/cron.d/certbot-renew
     service cron start || true

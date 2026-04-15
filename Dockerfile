@@ -45,12 +45,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Configure GD with JPEG, WebP and FreeType support
 RUN set -eux; \
-    if printf '%s\n' " ${PHP_EXTENSIONS} " | grep -q ' gd '; then \
+    case " ${PHP_EXTENSIONS} " in \
+        *" gd "*) \
         docker-php-ext-configure gd \
             --with-freetype \
             --with-jpeg \
-            --with-webp; \
-    fi; \
+            --with-webp \
+        ;; \
+    esac; \
     if [ -n "${PHP_EXTENSIONS}" ]; then \
         docker-php-ext-install -j"$(nproc)" ${PHP_EXTENSIONS}; \
     fi; \
@@ -95,6 +97,7 @@ RUN { echo 'ServerTokens Prod'; echo 'ServerSignature Off'; } \
     > /etc/apache2/conf-available/security-hardening.conf \
     && a2enconf security-hardening
 
+# Allow Apache to bind to ports 80/443 after the entrypoint drops privileges to www-data.
 RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/apache2 \
     && mkdir -p /var/run/apache2 /var/lock/apache2 /var/log/apache2 /var/www/letsencrypt \
     && chown -R www-data:www-data /var/run/apache2 /var/lock/apache2 /var/log/apache2 /var/www/letsencrypt
