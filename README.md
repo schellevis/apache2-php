@@ -67,6 +67,15 @@ Release tags (e.g. `v1.2.3`) are additionally suffixed: `v1.2.3-php8.3`.
 | `USE_LETSENCRYPT` | `false` | Set to `true` to request/renew a Let's Encrypt certificate |
 | `FORCE_HTTPS` | `false` | Set to `true` to redirect all HTTP → HTTPS (301) |
 
+Build-time extension selection is controlled with build args, which `docker compose`
+can source from environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PHP_EXTENSIONS` | `bcmath curl dom exif gd gettext gmp intl mbstring mysqli opcache pcntl pdo pdo_mysql pdo_pgsql pdo_sqlite pgsql posix simplexml soap sockets xsl zip` | Core extensions compiled with `docker-php-ext-install` |
+| `PECL_EXTENSIONS` | `apcu redis memcached mongodb imagick swoole` | PECL extensions installed and enabled by default |
+| `DEV_PECL_EXTENSIONS` | `xdebug pcov` | Development PECL extensions installed but left disabled |
+
 ---
 
 ## Let's Encrypt / SSL
@@ -138,6 +147,15 @@ development environments, because they impact runtime performance.
 > **Note:** xdebug uses `zend_extension` (it hooks into the Zend Engine); pcov uses the
 > standard `extension` directive.
 
+You can trim the installed extension set at build time. Example:
+
+```bash
+PHP_EXTENSIONS="bcmath gd intl mbstring mysqli opcache pdo pdo_mysql zip" \
+PECL_EXTENSIONS="apcu redis" \
+DEV_PECL_EXTENSIONS="" \
+docker compose build
+```
+
 ---
 
 ## Custom PHP configuration
@@ -170,6 +188,13 @@ docker build -t apache2-php .
 
 # Specific PHP version
 docker build --build-arg PHP_VERSION=8.3 -t apache2-php:php8.3 .
+
+# Minimal extension set
+docker build \
+  --build-arg PHP_EXTENSIONS="bcmath gd intl mbstring mysqli opcache pdo pdo_mysql zip" \
+  --build-arg PECL_EXTENSIONS="apcu redis" \
+  --build-arg DEV_PECL_EXTENSIONS="" \
+  -t apache2-php:minimal .
 ```
 
 ### docker compose
@@ -177,6 +202,9 @@ docker build --build-arg PHP_VERSION=8.3 -t apache2-php:php8.3 .
 ```bash
 PHP_VERSION=8.4 docker compose up --build
 ```
+
+Apache starts through the entrypoint with root only for certificate/bootstrap tasks and
+then drops privileges before launching the web server process.
 
 ---
 
