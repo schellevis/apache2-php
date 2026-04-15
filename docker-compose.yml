@@ -1,16 +1,12 @@
 # docker-compose.yml – local development helper
 #
 # Usage:
-#   docker compose up --build            # HTTP-only, self-signed TLS
-#   DOMAIN=example.com EMAIL=you@example.com USE_LETSENCRYPT=true docker compose up --build
+#   docker compose up            # HTTP-only, self-signed TLS
+#   DOMAIN=example.com EMAIL=you@example.com USE_LETSENCRYPT=true docker compose up
 
 services:
   web:
-    build:
-      context: .
-      args:
-        PHP_VERSION: ${PHP_VERSION:-8.3}
-    image: apache2-php:local
+    image: ghcr.io/schellevis/apache2-php:latest
     ports:
       - "80:80"
       - "443:443"
