@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 **apache2-php** is a Docker image that combines:
 
 - **Apache 2** (mod_rewrite, mod_ssl, mod_headers, mod_http2, …)
-- **PHP** – version selected at build time via `ARG PHP_VERSION` (default `8.3`)
+- **PHP** – version selected at build time via `ARG PHP_VERSION` (default `8.4`)
 - A curated set of common PHP extensions (bcmath, gd, intl, mbstring, pdo_mysql,
   pdo_pgsql, redis, apcu, …)
 - **Let's Encrypt** / certbot support with automatic certificate renewal
@@ -44,17 +44,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 ## Build commands
 
 ```bash
-# Build with default PHP version (8.3)
+# Build with default PHP version (8.4)
 docker build -t apache2-php .
 
 # Build with a specific PHP version
-docker build --build-arg PHP_VERSION=8.4 -t apache2-php:php8.4 .
+docker build --build-arg PHP_VERSION=8.3 -t apache2-php:php8.3 .
 
 # Build and run locally with docker compose
 docker compose up --build
 
 # Build for a specific PHP version via compose
-PHP_VERSION=8.2 docker compose up --build
+PHP_VERSION=8.3 docker compose up --build
 ```
 
 ---
@@ -105,7 +105,7 @@ docker exec <container> php -m
 ### PHP version via build ARG
 The PHP version is a **build-time** argument (`ARG PHP_VERSION`), not a runtime env var,
 because the PHP binary itself is baked into the image layer.  
-The GitHub Actions matrix builds separate images for each supported version (8.1–8.4).
+The GitHub Actions matrix builds separate images for each supported version (8.3–8.4).
 
 ### TLS certificate handling (entrypoint.sh)
 1. If `USE_LETSENCRYPT=true` – run `certbot certonly --standalone` on first boot,

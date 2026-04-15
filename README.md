@@ -53,8 +53,6 @@ Images are pushed to `ghcr.io/schellevis/apache2-php`.
 | `latest` | 8.4 (latest stable) |
 | `php8.4` | 8.4 |
 | `php8.3` | 8.3 |
-| `php8.2` | 8.2 |
-| `php8.1` | 8.1 |
 
 Release tags (e.g. `v1.2.3`) are additionally suffixed: `v1.2.3-php8.3`.
 
@@ -139,11 +137,11 @@ Override individual values by mounting your own ini file:
 ## Building locally
 
 ```bash
-# Default PHP version (8.3)
+# Default PHP version (8.4)
 docker build -t apache2-php .
 
 # Specific PHP version
-docker build --build-arg PHP_VERSION=8.4 -t apache2-php:php8.4 .
+docker build --build-arg PHP_VERSION=8.3 -t apache2-php:php8.3 .
 ```
 
 ### docker compose
@@ -185,7 +183,7 @@ The workflow (`.github/workflows/build.yml`) triggers on:
 - New version tag (`v*`)
 - Weekly schedule (Sunday 02:00 UTC) – picks up base-image security patches
 
-It builds **amd64** and **arm64** images for PHP versions **8.1, 8.2, 8.3, 8.4** in
+It builds **amd64** and **arm64** images for PHP versions **8.3, 8.4** in
 parallel and pushes them to `ghcr.io`.
 
 ---
