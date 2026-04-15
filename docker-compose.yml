@@ -11,8 +11,6 @@ services:
       args:
         PHP_VERSION: ${PHP_VERSION:-8.4}
         PHP_EXTENSIONS: ${PHP_EXTENSIONS:-bcmath curl dom exif gd gettext gmp intl mbstring mysqli opcache pcntl pdo pdo_mysql pdo_pgsql pdo_sqlite pgsql posix simplexml soap sockets xsl zip}
-        PECL_EXTENSIONS: ${PECL_EXTENSIONS:-apcu redis memcached mongodb imagick swoole}
-        DEV_PECL_EXTENSIONS: ${DEV_PECL_EXTENSIONS:-xdebug pcov}
     image: ghcr.io/schellevis/apache2-php:latest
     ports:
       - "80:80"
