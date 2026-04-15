@@ -100,15 +100,43 @@ Mount `/etc/letsencrypt` as a named volume to persist certificates across contai
 
 ## PHP extensions included
 
-| Extension | Type |
-|-----------|------|
-| bcmath, curl, dom, exif, gettext | built-in |
-| gd (JPEG + WebP + FreeType) | built-in |
-| intl, mbstring | built-in |
-| mysqli, pdo, pdo_mysql, pdo_pgsql, pgsql | built-in |
-| opcache, simplexml, soap, sockets, xsl, zip | built-in |
-| apcu | PECL |
-| redis | PECL |
+### Built-in extensions
+
+| Extension(s) | Notes |
+|---|---|
+| bcmath, curl, dom, exif, gettext | general purpose |
+| gd | JPEG + WebP + FreeType support |
+| gmp | GNU Multiple Precision arithmetic |
+| intl, mbstring | internationalisation / multibyte strings |
+| mysqli, pdo, pdo_mysql, pdo_pgsql, pdo_sqlite, pgsql | databases |
+| opcache | bytecode cache (enabled, JIT on) |
+| pcntl, posix, sockets | process / OS / networking |
+| simplexml, soap, xsl, zip | XML, SOAP, archives |
+
+### PECL extensions (enabled by default)
+
+| Extension | Notes |
+|---|---|
+| apcu | in-memory user cache |
+| igbinary | fast binary serializer – used by redis & memcached |
+| imagick | ImageMagick image manipulation |
+| memcached | Memcached client (igbinary serializer enabled) |
+| mongodb | MongoDB driver |
+| redis | Redis client (igbinary serializer enabled) |
+| swoole | Async PHP runtime (OpenSSL enabled) |
+
+### PECL extensions (installed, NOT enabled by default)
+
+These are available in the image but must be explicitly enabled, typically only in
+development environments, because they impact runtime performance.
+
+| Extension | How to enable |
+|---|---|
+| xdebug | `echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini` |
+| pcov | `echo "extension=pcov" > /usr/local/etc/php/conf.d/pcov.ini` |
+
+> **Note:** xdebug uses `zend_extension` (it hooks into the Zend Engine); pcov uses the
+> standard `extension` directive.
 
 ---
 
