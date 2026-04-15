@@ -67,14 +67,11 @@ Release tags (e.g. `v1.2.3`) are additionally suffixed: `v1.2.3-php8.3`.
 | `USE_LETSENCRYPT` | `false` | Set to `true` to request/renew a Let's Encrypt certificate |
 | `FORCE_HTTPS` | `false` | Set to `true` to redirect all HTTP → HTTPS (301) |
 
-Build-time extension selection is controlled with build args, which `docker compose`
-can source from environment variables:
+The extension set is controlled with a build arg:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PHP_EXTENSIONS` | `bcmath curl dom exif gd gettext gmp intl mbstring mysqli opcache pcntl pdo pdo_mysql pdo_pgsql pdo_sqlite pgsql posix simplexml soap sockets xsl zip` | Core extensions compiled with `docker-php-ext-install` |
-| `PECL_EXTENSIONS` | `apcu redis memcached mongodb imagick swoole` | PECL extensions installed and enabled by default |
-| `DEV_PECL_EXTENSIONS` | `xdebug pcov` | Development PECL extensions installed but left disabled |
+| `PHP_EXTENSIONS` | `bcmath curl dom exif gd gettext gmp intl mbstring mysqli opcache pcntl pdo pdo_mysql pdo_pgsql pdo_sqlite pgsql posix simplexml soap sockets xsl zip` | Extensions compiled with `docker-php-ext-install` |
 
 ---
 
@@ -109,8 +106,6 @@ Mount `/etc/letsencrypt` as a named volume to persist certificates across contai
 
 ## PHP extensions included
 
-### Built-in extensions
-
 | Extension(s) | Notes |
 |---|---|
 | bcmath, curl, dom, exif, gettext | general purpose |
@@ -122,38 +117,12 @@ Mount `/etc/letsencrypt` as a named volume to persist certificates across contai
 | pcntl, posix, sockets | process / OS / networking |
 | simplexml, soap, xsl, zip | XML, SOAP, archives |
 
-### PECL extensions (enabled by default)
-
-| Extension | Notes |
-|---|---|
-| apcu | in-memory user cache |
-| igbinary | fast binary serializer – used by redis & memcached |
-| imagick | ImageMagick image manipulation |
-| memcached | Memcached client (igbinary serializer enabled) |
-| mongodb | MongoDB driver |
-| redis | Redis client (igbinary serializer enabled) |
-| swoole | Async PHP runtime (OpenSSL enabled) |
-
-### PECL extensions (installed, NOT enabled by default)
-
-These are available in the image but must be explicitly enabled, typically only in
-development environments, because they impact runtime performance.
-
-| Extension | How to enable |
-|---|---|
-| xdebug | `echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini` |
-| pcov | `echo "extension=pcov" > /usr/local/etc/php/conf.d/pcov.ini` |
-
-> **Note:** xdebug uses `zend_extension` (it hooks into the Zend Engine); pcov uses the
-> standard `extension` directive.
-
-You can trim the installed extension set at build time. Example:
+You can trim the extension set at build time:
 
 ```bash
-PHP_EXTENSIONS="bcmath gd intl mbstring mysqli opcache pdo pdo_mysql zip" \
-PECL_EXTENSIONS="apcu redis" \
-DEV_PECL_EXTENSIONS="" \
-docker compose build
+docker build \
+  --build-arg PHP_EXTENSIONS="bcmath gd intl mbstring mysqli opcache pdo pdo_mysql zip" \
+  -t apache2-php:minimal .
 ```
 
 ---
@@ -192,8 +161,6 @@ docker build --build-arg PHP_VERSION=8.3 -t apache2-php:php8.3 .
 # Minimal extension set
 docker build \
   --build-arg PHP_EXTENSIONS="bcmath gd intl mbstring mysqli opcache pdo pdo_mysql zip" \
-  --build-arg PECL_EXTENSIONS="apcu redis" \
-  --build-arg DEV_PECL_EXTENSIONS="" \
   -t apache2-php:minimal .
 ```
 
