@@ -14,6 +14,7 @@ DOMAIN="${DOMAIN:-localhost}"
 EMAIL="${EMAIL:-}"
 USE_LETSENCRYPT="${USE_LETSENCRYPT:-false}"
 FORCE_HTTPS="${FORCE_HTTPS:-false}"
+export DOMAIN
 
 SSL_CERT="/etc/ssl/certs/apache-ssl.crt"
 SSL_KEY="/etc/ssl/private/apache-ssl.key"
@@ -32,7 +33,23 @@ prepare_runtime_dirs() {
         /var/lock/apache2 \
         /var/log/apache2 \
         /var/www/letsencrypt/.well-known/acme-challenge
+    chown root:root /etc/ssl/certs
+    chmod 0755 /etc/ssl/certs
+    chown root:www-data /etc/ssl/private
+    chmod 0750 /etc/ssl/private
     chown -R www-data:www-data /var/run/apache2 /var/lock/apache2 /var/log/apache2 /var/www/letsencrypt
+    chmod 0755 /var/log/apache2
+    for log_file in \
+        /var/log/apache2/access.log \
+        /var/log/apache2/error.log \
+        /var/log/apache2/other_vhosts_access.log \
+        /var/log/apache2/ssl-access.log \
+        /var/log/apache2/ssl-error.log; do
+        rm -f "${log_file}"
+        touch "${log_file}"
+        chown www-data:www-data "${log_file}"
+        chmod 0644 "${log_file}"
+    done
 }
 
 sync_ssl_material() {
