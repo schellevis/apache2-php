@@ -2,14 +2,10 @@
 #   docker build --build-arg PHP_VERSION=8.4 -t apache2-php .
 ARG PHP_VERSION=8.4
 ARG PHP_EXTENSIONS="bcmath curl dom exif gd gettext gmp intl mbstring mysqli opcache pcntl pdo pdo_mysql pdo_pgsql pdo_sqlite pgsql posix simplexml soap sockets xsl zip"
-ARG PECL_EXTENSIONS="apcu redis memcached mongodb imagick swoole"
-ARG DEV_PECL_EXTENSIONS="xdebug pcov"
 
 FROM php:${PHP_VERSION}-apache
 
 ARG PHP_EXTENSIONS
-ARG PECL_EXTENSIONS
-ARG DEV_PECL_EXTENSIONS
 
 LABEL org.opencontainers.image.title="apache2-php" \
       org.opencontainers.image.description="Apache2 + PHP with common extensions and Let's Encrypt support" \
@@ -25,8 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgmp-dev \
         libicu-dev \
         libjpeg62-turbo-dev \
-        libmagickwand-dev \
-        libmemcached-dev \
         libonig-dev \
         libpng-dev \
         libpq-dev \
@@ -36,7 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxml2-dev \
         libxslt1-dev \
         libzip-dev \
-        libzstd-dev \
         openssl \
         python3-certbot-apache \
         unzip \
@@ -45,50 +38,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Configure GD with JPEG, WebP and FreeType support
 RUN set -eux; \
-    case " ${PHP_EXTENSIONS} " in \
-        *" gd "*) \
-        docker-php-ext-configure gd \
-            --with-freetype \
-            --with-jpeg \
-            --with-webp \
-        ;; \
-    esac; \
-    if [ -n "${PHP_EXTENSIONS}" ]; then \
-        docker-php-ext-install -j"$(nproc)" ${PHP_EXTENSIONS}; \
-    fi; \
-    pecl_enable_extensions=""; \
-    # Redis and Memcached are built with igbinary support, so igbinary must be installed first.
-    install_igbinary=false; \
-    case " ${PECL_EXTENSIONS} " in \
-        *" igbinary "*|*" redis "*|*" memcached "*) install_igbinary=true ;; \
-    esac; \
-    if [ "${install_igbinary}" = "true" ]; then \
-        pecl install igbinary; \
-        pecl_enable_extensions="${pecl_enable_extensions} igbinary"; \
-    fi; \
-    for ext in ${PECL_EXTENSIONS}; do \
-        case "${ext}" in \
-            apcu|imagick|mongodb) pecl install "${ext}" ;; \
-            igbinary) continue ;; \
-            redis) pecl install -D 'enable-redis-igbinary="yes"' redis ;; \
-            memcached) pecl install -D 'enable-memcached-igbinary="yes"' memcached ;; \
-            swoole) pecl install -D 'enable-swoole-openssl="yes"' swoole ;; \
-            "") continue ;; \
-            *) echo "Unknown PECL extension '${ext}' requires explicit configuration in Dockerfile" >&2; exit 1 ;; \
-        esac; \
-        pecl_enable_extensions="${pecl_enable_extensions} ${ext}"; \
-    done; \
-    if [ -n "${pecl_enable_extensions}" ]; then \
-        docker-php-ext-enable ${pecl_enable_extensions}; \
-    fi; \
-    if [ -n "${DEV_PECL_EXTENSIONS}" ]; then \
-        pecl install ${DEV_PECL_EXTENSIONS}; \
-    fi
-
-# Install development-only PECL extensions via DEV_PECL_EXTENSIONS – NOT enabled by default.
-# Enable in development by adding a volume-mounted ini file, e.g.:
-#   echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini
-#   echo "extension=pcov"        > /usr/local/etc/php/conf.d/pcov.ini
+    docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+        --with-webp; \
+    docker-php-ext-install -j"$(nproc)" ${PHP_EXTENSIONS}
 
 # Enable Apache modules
 RUN a2enmod rewrite ssl headers expires deflate http2
