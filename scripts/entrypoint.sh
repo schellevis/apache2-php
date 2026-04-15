@@ -27,12 +27,14 @@ WWW_GID="$(id -g www-data)"
 log() { echo "[entrypoint] $*"; }
 
 validate_domain() {
-    case "${DOMAIN}" in
-        *[!A-Za-z0-9.-]* | "" | .* | *..* | *- | -*)
-            log "ERROR: DOMAIN contains unsupported characters"
-            exit 1
-            ;;
-    esac
+    if [ "${DOMAIN}" = "localhost" ]; then
+        return
+    fi
+
+    if ! [[ "${DOMAIN}" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]; then
+        log "ERROR: DOMAIN must be a valid hostname"
+        exit 1
+    fi
 }
 
 prepare_runtime_dirs() {
