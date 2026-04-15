@@ -31,6 +31,7 @@ validate_domain() {
         return
     fi
 
+    # Accept RFC 1123-style hostnames: labels 1-63 chars, alnum plus interior hyphens only.
     if ! [[ "${DOMAIN}" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]; then
         log "ERROR: DOMAIN must be a valid hostname"
         exit 1

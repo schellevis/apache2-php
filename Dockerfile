@@ -57,7 +57,7 @@ RUN set -eux; \
         docker-php-ext-install -j"$(nproc)" ${PHP_EXTENSIONS}; \
     fi; \
     pecl_enable_extensions=""; \
-    # redis and memcached are built with igbinary support, so igbinary must be installed first.
+    # Redis and Memcached are built with igbinary support, so igbinary must be installed first.
     install_igbinary=false; \
     case " ${PECL_EXTENSIONS} " in \
         *" igbinary "*|*" redis "*|*" memcached "*) install_igbinary=true ;; \
@@ -74,7 +74,7 @@ RUN set -eux; \
             memcached) pecl install -D 'enable-memcached-igbinary="yes"' memcached ;; \
             swoole) pecl install -D 'enable-swoole-openssl="yes"' swoole ;; \
             "") continue ;; \
-            *) echo "PECL extension '${ext}' requires explicit configuration in Dockerfile" >&2; exit 1 ;; \
+            *) echo "Unknown PECL extension '${ext}' requires explicit configuration in Dockerfile" >&2; exit 1 ;; \
         esac; \
         pecl_enable_extensions="${pecl_enable_extensions} ${ext}"; \
     done; \
